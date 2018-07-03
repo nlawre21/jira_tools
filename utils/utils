@@ -1,0 +1,30 @@
+import jira
+import pandas as pd
+
+from utils.field_names import ALL_FIELDS
+
+
+def get_issues(jira, jql):
+    issues_list = []
+    block_size = 100
+    block_num = 0
+    while True:
+        start_idx = block_num * block_size
+        issues = jira.search_issues(jql, start_idx, block_size)
+        if len(issues) == 0:
+            break
+        block_num += 1
+        [issues_list.append(issue) for issue in issues]
+    return issues_list
+
+
+def get_fields(x, list_of_fields=None):
+    field_list = [field.lower() for field in list_of_fields] if list_of_fields else ALL_FIELDS
+    return {k: getattr(x.fields, k) for k in field_list}
+
+
+def jql_to_df(creds, jql, list_of_fields=None):
+    auth = (creds['jira_usr'], creds['jira_pw'])
+    J = jira.JIRA(basic_auth=auth, options={'server': 'https://avantinc.atlassian.net'})
+    issues = get_issues(J, jql)
+    return pd.DataFrame([get_fields(i, list_of_fields=list_of_fields) for i in issues])
